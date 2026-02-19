@@ -1,0 +1,425 @@
+{
+  "name": "Job Search AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Job Search",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "placeholder": "Enter name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "Enter your email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone",
+              "fieldType": "number",
+              "placeholder": "Enter you phone number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Resume",
+              "fieldType": "file",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Job Type",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Job"
+                  },
+                  {
+                    "option": "Internship"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Domain",
+              "placeholder": "Enter the job domain ",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6fee51d3-abd8-4e55-9241-b6f13627fd98",
+      "name": "On form submission",
+      "webhookId": "cdbcfab4-5073-464e-b71e-f344c5c6e850"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1200,
+        304
+      ],
+      "id": "76500703-f3f6-4ab7-b313-e83579c3335d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "sHi3PkExKa6JMlqe",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "180175af-de0e-4d78-b27b-46eda437b79f",
+              "name": "Email",
+              "value": "={{ $('On form submission').item.json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "9bcddfc3-afe6-4a1a-85a3-8629a9ea95d7",
+              "name": "Job Type",
+              "value": "={{ $('On form submission').item.json['Job Type'] }}",
+              "type": "string"
+            },
+            {
+              "id": "bc9873d0-6745-403f-ab07-76f8f6435436",
+              "name": "Skills",
+              "value": "={{ $('Extracts Skills from text').item.json.output[0].content[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "428bfd45-9a92-41a3-b028-cc5afd7a1c17",
+              "name": "response",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        16
+      ],
+      "id": "6e2e65b9-615d-4d56-b361-4ff76d1dc36f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst skillsobj =JSON.parse($input.first().json.Skills);\n\nconst jobs=$input.first().json.response.map(j=> ({\n  jobIitle: j.job_title,\n  company: j.employer_name,\n  jobDescription: j.job_description,\n  applyLink: j.apply_options[0].apply_link\n}));\n\nreturn  [{\n  skills: skillsobj.skills,\n  jobType: $input.first().json['Job Type'],\n  jobs\n}];\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        16
+      ],
+      "id": "55c3b097-bddf-462c-95d6-e6778255baa0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('On form submission').item.json.Email }}",
+        "subject": "Job matches based on your resume",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1936,
+        80
+      ],
+      "id": "00566d36-0506-4334-af51-19d54cf331ab",
+      "name": "Send a message",
+      "webhookId": "ecaec625-a9dc-4c36-b572-d85a54c142e3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qzucPENki79Go8Wa",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "Resume",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d4f85bb0-eea6-4b55-86f8-17694f305967",
+      "name": "Extract text from File"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an information extraction system.\n\nFrom the text below, extract all professional skills (technical skills, tools, frameworks, programming languages, platforms, and relevant soft skills if clearly mentioned).\n\nRules:\n- Return ONLY valid JSON\n- Do NOT add explanations\n- Do NOT include duplicates\n- Normalize skill names (e.g. \"js\" → \"JavaScript\")\n- If no skills are found, return an empty array\n\nOutput format:\n{\n  \"skills\": []\n}\n\nText:{{ $json.text }}\n\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        16
+      ],
+      "id": "94147114-a92b-4a3c-81e8-bad13ebef773",
+      "name": "Extracts Skills from text",
+      "credentials": {
+        "openAiApi": {
+          "id": "sHi3PkExKa6JMlqe",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://jsearch.p.rapidapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $('On form submission').item.json.Domain }} {{ $('On form submission').item.json['Job Type'] }} in India"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            },
+            {
+              "name": "num_pages",
+              "value": "3"
+            },
+            {
+              "name": "country",
+              "value": "in"
+            },
+            {
+              "name": "date_posted",
+              "value": "all"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-rapidapi-host",
+              "value": "jsearch.p.rapidapi.com"
+            },
+            {
+              "name": "x-rapidapi-key",
+              "value": "d8de258d21msh96065a13b9506c0p108b56jsnc3eecd186240"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        752,
+        16
+      ],
+      "id": "242245b6-a79b-41eb-bfae-40bf4a9e97e3",
+      "name": "Job Search API"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a job-matching assistant.\n\nInput:\n- skills: {{ $json.skills }}\n- jobType: {{ $json.jobType }}\n- jobs: {{ $json.jobs }}\n\nYour task:\n1. Select jobs that 30%-40% match the candidate skills.\n2. If jobType is \"Internship\", prefer internships but do not reject good matches.\n3. Include every job that has a clear and relevant match with the candidate’s skills and the s  pecified job type.\n\nOutput requirements:\n- Output ONLY plain text (no JSON, no markdown).\n- The content must be suitable to send directly as an email body.\n- List jobs in a clear, readable format.\n- For each job include:\n  - Job Title\n  - Company Name\n  - Job Type (Job or Internship if available)\n  - Short reason why it matches the skills\n  - Application link\n- Number each job.\n- Do NOT return an empty list if relevant jobs exist.\n",
+        "needsFallback": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1456,
+        80
+      ],
+      "id": "50b5f0ec-8421-44fa-a588-b11b2c6e8104",
+      "name": "Matches Skills with Jobs"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        368
+      ],
+      "id": "fcba3401-6e7e-4ad8-a788-89aff8ac5107",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "vEu0bLPJbnNMUtc1",
+          "name": "Groq account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract text from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Matches Skills with Jobs",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Matches Skills with Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract text from File": {
+      "main": [
+        [
+          {
+            "node": "Extracts Skills from text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracts Skills from text": {
+      "main": [
+        [
+          {
+            "node": "Job Search API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Search API": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matches Skills with Jobs": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Matches Skills with Jobs",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4377195e-2e84-4d61-baba-533f18c299a4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ff9e8f5037bd4f4d6d0e1f8382867748a1bffe12e92470d06395230faf80ca4"
+  },
+  "id": "0YXqckaNti0O4eOtK0dHU",
+  "tags": []
+}
